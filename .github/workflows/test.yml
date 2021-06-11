@@ -1,0 +1,29 @@
+---
+name: Test
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: setup
+        run: |
+          sudo apt update
+          sudo apt install -y jq
+      - name: get source
+        uses: actions/checkout@v2
+      - name: limit before
+        run: |
+          TOKEN=$(curl "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" | jq -r .token)
+          curl --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest
+      - name: test
+        run: go run main.go
+      - name: limit after
+        if: ${{ always() }}
+        run: |
+          TOKEN=$(curl "https://auth.docker.io/token?service=registry.docker.io&scope=repository:ratelimitpreview/test:pull" | jq -r .token)
+          curl --head -H "Authorization: Bearer $TOKEN" https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest
+
